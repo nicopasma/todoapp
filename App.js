@@ -1,63 +1,49 @@
 import { StatusBar } from 'expo-status-bar';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import TodoItem from './components/ToDoItem';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
-import { Button, Divider, TextInput } from 'react-native-paper';
+import { use, useEffect, useState } from 'react';
+import { Button, Divider, MD2LightTheme, MD3LightTheme, PaperProvider, Text, TextInput } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFireTodos } from './firebase/Firestorecontroller';
+import { addTodo, removeAllTodos, useFireTodos } from './firebase/Firestorecontroller';
+import TodoItem from './components/ToDoItem';
+import { TodoList } from './components/TodoList';
+import { logoutUser, signUpUser, useFireAuth } from './firebase/FirebaseAuthController';
 
 export default function App() {
 
-  const [items, setItems] = useState();
   const [todo, setTodo] = useState('');
   const todos = useFireTodos();
+  const user = useFireAuth();
 
-  useEffect(()=>{
-    if(items){
-      AsyncStorage.setItem('todos', JSON.stringify(items))
-        .catch(error => console.log(error.message));
-    } else {
-      getItems();
-    }
-  },[items])
-
-  function getItems(){
-    AsyncStorage.getItem('todos')
-      .then(json => {
-        let itemList = JSON.parse(json);
-        setItems(itemList ? itemList : []);
-      }) 
-      .catch(error => console.log(error.message))
+  function removeAllAlert(){
+    Alert.alert('Todolist', 'Remove all todo item?', [
+      {text: 'Cancel'},
+      {text:'OK', onPress: removeAllTodos}
+    ])
   }
 
-  function addTodo(){
-    setItems([...items, {text: todo, checked: false}])
-  }
-
-  function todoChecked(item, checked){
-    setItems( items.map( i => i.text == item.text ? {...i, checked} : i)  )
-  }
-
-  function removeTodos(){
-    setItems( items.filter( i => !i.checked) )
-  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TextInput
-        label={'Todo'}
-        value={todo}
-        onChangeText={setTodo}
-        right={<TextInput.Icon icon={'plus-thick'} onPress={addTodo}/>}
-      />
-      <Button mode='contained' onPress={removeTodos}>Remove selected</Button>
-      <FlatList
-        data={items}
-        renderItem={({item}) => <TodoItem text={item.text} checked={item.checked} onCheck={checked=>todoChecked(item, checked)}/>}
-        ItemSeparatorComponent={<Divider bold={true}/>}
-      />
-    </SafeAreaView>
+    <PaperProvider >
+      <SafeAreaView style={styles.container}>
+        <Text variant='headlineMedium'>Todolist ({todos ? todos.length : 0 })</Text>
+        <TextInput
+          label={'New todo'}
+          value={todo}
+          onChangeText={setTodo}
+          right={
+            <TextInput.Icon 
+              icon={'plus-circle'} 
+              onPress={()=>addTodo(todo)} 
+              size={32}
+              color={MD3LightTheme.colors.primary}
+            />
+          }
+        />
+        <TodoList todos={todos}/>
+        <Button mode='contained' onPress={removeAllAlert}>Remove all</Button>
+      </SafeAreaView>
+    </PaperProvider>
   );
 }
 
