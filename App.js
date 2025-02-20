@@ -1,49 +1,48 @@
-import { StatusBar } from 'expo-status-bar';
-import { Alert, FlatList, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { use, useEffect, useState } from 'react';
-import { Button, Divider, MD2LightTheme, MD3LightTheme, PaperProvider, Text, TextInput } from 'react-native-paper';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { addTodo, removeAllTodos, useFireTodos } from './firebase/Firestorecontroller';
-import TodoItem from './components/ToDoItem';
-import { TodoList } from './components/TodoList';
-import { logoutUser, signUpUser, useFireAuth } from './firebase/FirebaseAuthController';
+import { StyleSheet } from 'react-native';
+import { IconButton, PaperProvider } from 'react-native-paper';
+import { logoutUser, useFireAuth } from './firebase/FirebaseAuthController';
+import Login from './screens/Login';
+import Todos from './screens/Todos';
+import { UserContext } from './contexts/UserContext';
+import { useContext } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { UserTodosContext } from './contexts/UserTodosContext';
+
+const Drawer = createDrawerNavigator();
 
 export default function App() {
 
-  const [todo, setTodo] = useState('');
-  const todos = useFireTodos();
-  const user = useFireAuth();
-
-  function removeAllAlert(){
-    Alert.alert('Todolist', 'Remove all todo item?', [
-      {text: 'Cancel'},
-      {text:'OK', onPress: removeAllTodos}
-    ])
-  }
-
+  const [user, todos] = useFireAuth();
 
   return (
-    <PaperProvider >
-      <SafeAreaView style={styles.container}>
-        <Text variant='headlineMedium'>Todolist ({todos ? todos.length : 0 })</Text>
-        <TextInput
-          label={'New todo'}
-          value={todo}
-          onChangeText={setTodo}
-          right={
-            <TextInput.Icon 
-              icon={'plus-circle'} 
-              onPress={()=>addTodo(todo)} 
-              size={32}
-              color={MD3LightTheme.colors.primary}
-            />
-          }
+    <UserTodosContext.Provider value={todos}>
+      <UserContext.Provider value={user}>
+        <PaperProvider >
+          {user ? <Navigation /> : <Login />}
+        </PaperProvider>
+      </UserContext.Provider>
+    </UserTodosContext.Provider>
+  );
+}
+
+function Navigation() {
+  const user = useContext(UserContext);
+
+  return (
+    <NavigationContainer>
+      <Drawer.Navigator
+        screenOptions={{
+          headerRight: () => <IconButton icon={'logout'} onPress={logoutUser} />,
+          headerTitle: user?.email
+        }}
+      >
+        <Drawer.Screen
+          name='Todos'
+          component={Todos}
         />
-        <TodoList todos={todos}/>
-        <Button mode='contained' onPress={removeAllAlert}>Remove all</Button>
-      </SafeAreaView>
-    </PaperProvider>
+      </Drawer.Navigator>
+    </NavigationContainer>
   );
 }
 
